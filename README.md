@@ -17,12 +17,6 @@ cd coupon-management-api
 # Install dependencies
 npm install
 
-# Build the project
-npm run build
-
-# Run the application
-npm start
-
 # Run in development mode
 npm run dev
 
@@ -69,7 +63,7 @@ interface Coupon {
 
 ## Implemented Features
 
-### ✅ Fully Implemented Cases
+### Fully Implemented Cases
 
 ### 1. Cart-wise Coupons
 
@@ -115,7 +109,6 @@ interface Coupon {
 
 - **Coupon Expiration**: Valid from/to dates
 - **Usage Limits**: Per coupon and per user limits
-- **Minimum Cart Value**: Required cart total
 - **Product Availability**: Products must exist in cart
 - **Active/Inactive Status**: Coupon activation control
 - **Stacking Rules**: Cannot combine with other coupons (basic)
@@ -127,8 +120,6 @@ interface Coupon {
 - **No Negative Totals**: Ensure final price ≥ 0
 - **Partial Application**: Apply only to eligible items
 - **Repetition Limits**: For BxGy coupons
-
-### ⚠️ Partially Implemented Cases
 
 ### 1. Advanced BxGy Scenarios
 
@@ -183,21 +174,6 @@ interface Coupon {
 - **Analytics Dashboard**: Coupon performance metrics
 - **Geographic Restrictions**: Only valid in certain regions
 
-### 6. Edge Cases & Validation
-
-- **Partial Refunds**: How to handle when coupon was used
-- **Price Changes**: Coupon applied before price change
-- **Out of Stock**: Product goes out of stock after coupon application
-- **Cart Modifications**: Adding/removing items after coupon
-- **Currency Conversion**: Multi-currency support
-
-### 7. Performance & Scale
-
-- **High Volume**: Handling thousands of concurrent coupon checks
-- **Caching**: Frequently used coupons
-- **Database Optimization**: Indexing for coupon queries
-- **Distributed Systems**: Multiple API instances
-
 ### 8. Integration Features
 
 - **Webhook Notifications**: When coupon is used
@@ -233,7 +209,7 @@ interface Coupon {
 
 ### 2. Technical Assumptions
 
-- Database is SQLite for development simplicity
+- Database is mongoDB for development simplicity
 - No authentication/authorization implemented
 - Single server instance (no clustering)
 - In-memory cart storage (not persisted)
@@ -262,7 +238,6 @@ interface Coupon {
 
 ### 2. Performance Limitations
 
-- **No Indexing**: Database queries could be slow with large data
 - **No Caching**: Frequently accessed data not cached
 - **Synchronous Processing**: No async job processing
 - **No Load Balancing**: Single instance bottleneck
