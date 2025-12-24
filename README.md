@@ -282,6 +282,28 @@ interface Coupon {
 - **Memory Limits**: In-memory cart storage
 - **No Queue System**: Synchronous processing
 
+## Future Extensibility
+
+### 1. Adding New Coupon Types
+
+1. Create new class implementing `CouponStrategy`
+2. Add to `CouponFactory`
+3. Update validation schemas
+4. Add to API documentation
+
+### 2. Adding New Constraints
+
+1. Extend constraint validation system
+2. Add new constraint types
+3. Update coupon validation logic
+
+### 3. Performance Improvements
+
+1. Add Redis caching
+2. Implement database indexing
+3. Add query optimization
+4. Implement connection pooling
+
 ## Example Requests & Responses
 
 ### 1. Create Cart-wise Coupon
@@ -350,30 +372,6 @@ POST /applicable-coupons
 
 ```
 
-## Future Extensibility
-
-### 1. Adding New Coupon Types
-
-1. Create new class implementing `CouponStrategy`
-2. Add to `CouponFactory`
-3. Update validation schemas
-4. Add to API documentation
-
-### 2. Adding New Constraints
-
-1. Extend constraint validation system
-2. Add new constraint types
-3. Update coupon validation logic
-
-### 3. Performance Improvements
-
-1. Add Redis caching
-2. Implement database indexing
-3. Add query optimization
-4. Implement connection pooling
-
-### CURL for each 
-
 - for CART_WISE
 
 ```
@@ -392,7 +390,7 @@ curl --location 'http://localhost:3000/api/coupons' \
 
 ```
 
-- PRODUCT_WISE
+### PRODUCT_WISE
 
 ```
 curl --location 'http://localhost:3000/api/coupons' \
@@ -409,7 +407,7 @@ curl --location 'http://localhost:3000/api/coupons' \
 
 ```
 
-- BUY10GET2
+### BUYXGETY
 
 ```
 curl --location 'http://localhost:3000/api/coupons' \
@@ -432,21 +430,20 @@ curl --location 'http://localhost:3000/api/coupons' \
 
 ```
 
-- GET ALL
+### GET ALL
 
 ```
 curl --location 'http://localhost:3000/api/coupons'
 
 ```
-
-- GET BASED ON CODE
+### GET BASED ON CODE
 
 ```
 curl --location 'http://localhost:3000/api/coupons/BUY10GET2'
 
 ```
 
-- PUT OPERATION
+### PUT OPERATION
 
 ```
 curl --location --request PUT 'http://localhost:3000/api/coupons/SAVE120' \
@@ -462,7 +459,7 @@ curl --location --request PUT 'http://localhost:3000/api/coupons/SAVE120' \
 
 ```
 
-- DELETE COUPON
+### DELETE COUPON
 
 ```
 curl --location --request DELETE 'http://localhost:3000/api/coupons/SAVE131'
