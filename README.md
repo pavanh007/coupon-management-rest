@@ -372,27 +372,6 @@ POST /applicable-coupons
 3. Add query optimization
 4. Implement connection pooling
 
-## Testing Strategy
-
-### Unit Tests
-
-- Coupon validation logic
-- Discount calculation algorithms
-- Business rule validation
-
-### Integration Tests
-
-- API endpoint testing
-- Database operations
-- End-to-end coupon application
-
-### Edge Case Tests
-
-- Empty cart scenarios
-- Maximum discount scenarios
-- Expired coupon handling
-- Usage limit scenarios
-
 ### CURL for each 
 
 - for CART_WISE
