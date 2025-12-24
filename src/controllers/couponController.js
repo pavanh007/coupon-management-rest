@@ -10,7 +10,6 @@ export const couponController = {
         console.log(error.details[0].message)
       return res.status(400).json({ error: error.details[0].message });
     }
-    
     const validationErrors = Coupon.validateCouponData(value);
     if (validationErrors.length > 0) {
       return res.status(400).json({ error: validationErrors.join(', ') });
@@ -84,7 +83,6 @@ async updateCoupon(req, res) {
     }
     if (value.code) {
       const normalizedNewCode = value.code.toUpperCase().trim();
-      // Only check for duplicates if the code is actually changing
       if (normalizedNewCode !== existingCoupon.code) {
         const duplicateCoupon = await Coupon.findOne({ code: normalizedNewCode });
         
@@ -95,7 +93,6 @@ async updateCoupon(req, res) {
           });
         }
       }
-      // Apply the normalized code to the value object
       value.code = normalizedNewCode;
     }
     Object.assign(existingCoupon, value);
@@ -146,25 +143,19 @@ async updateCoupon(req, res) {
     });
   },
   
-  // Apply a specific coupon to cart
   async applyCoupon(req, res) {
-    // Validate cart
     const { error, value } = validateCart(req.body.cart);
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
     }
     
-    // Get coupon
     const coupon = await Coupon.findById(req.params.id);
     if (!coupon) {
       return res.status(404).json({ error: 'Coupon not found' });
     }
     
     try {
-      // Apply coupon to cart
       const result = CouponService.applyCouponToCart(coupon, value);
-      
-      // Increment coupon usage
       coupon.currentUsage += 1;
       await coupon.save();
       

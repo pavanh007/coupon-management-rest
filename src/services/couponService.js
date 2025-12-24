@@ -1,26 +1,18 @@
 export class CouponService {
   
-  /**
-   * Check if coupon is applicable to cart
-   */
   static isCouponApplicable(coupon, cart) {
-    // Basic checks
     if (!coupon.isApplicable()) {
       return { applicable: false, reason: 'Coupon is not active, expired, or usage limit reached' };
     }
     
-    // Calculate cart total
     const cartTotal = this.calculateCartTotal(cart);
     
-    // Check minimum cart value
     if (coupon.minCartValue && cartTotal < coupon.minCartValue) {
       return { 
         applicable: false, 
         reason: `Cart total (${cartTotal}) is less than minimum required (${coupon.minCartValue})` 
       };
     }
-    
-    // Type-specific checks
     switch(coupon.type) {
       case 'CART_WISE':
         return this.checkCartWiseApplicability(coupon, cart, cartTotal);
@@ -35,10 +27,6 @@ export class CouponService {
         return { applicable: false, reason: 'Unknown coupon type' };
     }
   }
-  
-  /**
-   * Calculate cart total
-   */
   static calculateCartTotal(cart) {
     if (!cart || !cart.items) return 0;
     
@@ -47,23 +35,14 @@ export class CouponService {
     }, 0);
   }
   
-  /**
-   * Check cart-wise coupon applicability
-   */
   static checkCartWiseApplicability(coupon, cart, cartTotal) {
-    // Cart-wise coupons are always applicable if cart meets minimum value
     return { applicable: true, cartTotal };
   }
   
-  /**
-   * Check product-wise coupon applicability
-   */
   static checkProductWiseApplicability(coupon, cart) {
     if (!coupon.applicableProducts || coupon.applicableProducts.length === 0) {
       return { applicable: false, reason: 'No applicable products defined' };
     }
-    
-    // Check if any applicable product is in cart
     const applicableItems = cart.items.filter(item => 
       coupon.applicableProducts.includes(item.productId)
     );
@@ -71,8 +50,6 @@ export class CouponService {
     if (applicableItems.length === 0) {
       return { applicable: false, reason: 'No applicable products in cart' };
     }
-    
-    // Calculate total from applicable items
     const applicableTotal = applicableItems.reduce((total, item) => {
       return total + (item.price * item.quantity);
     }, 0);
@@ -83,26 +60,17 @@ export class CouponService {
       applicableTotal 
     };
   }
-  
-  /**
-   * Check BxGy coupon applicability
-   */
   static checkBxGyApplicability(coupon, cart) {
     if (!coupon.buyProducts || coupon.buyProducts.length === 0 ||
         !coupon.getProducts || coupon.getProducts.length === 0) {
       return { applicable: false, reason: 'Invalid BxGy configuration' };
     }
-    
-    // Calculate total quantity of each product in cart
     const cartProducts = {};
     cart.items.forEach(item => {
       cartProducts[item.productId] = item.quantity;
     });
-    
-    // Check if we have enough buy products
     let maxApplications = 0;
     
-    // For each buy product requirement
     for (const buyReq of coupon.buyProducts) {
       const cartQuantity = cartProducts[buyReq.productId] || 0;
       const possibleApplications = Math.floor(cartQuantity / buyReq.quantity);
@@ -111,8 +79,6 @@ export class CouponService {
         maxApplications = possibleApplications;
       }
     }
-    
-    // Apply repetition limit
     const repetitionLimit = coupon.repetitionLimit || 1;
     maxApplications = Math.min(maxApplications, repetitionLimit);
     
@@ -122,20 +88,13 @@ export class CouponService {
         reason: 'Insufficient quantity of buy products' 
       };
     }
-    
-    // Check if we have enough get products (optional, depends on business logic)
-    // Some businesses allow free items even if not in cart
-    
     return { 
       applicable: true, 
       maxApplications,
       cartProducts 
     };
   }
-  
-  /**
-   * Calculate discount for a coupon
-   */
+
   static calculateDiscount(coupon, cart) {
     const applicability = this.isCouponApplicable(coupon, cart);
     
@@ -145,143 +104,143 @@ export class CouponService {
     
     switch(coupon.type) {
       case 'CART_WISE':
-        return this.calculateCartWiseDiscount(coupon, cart, applicability);
+         return this.calculateCartWiseDiscount(coupon, cart);
         
       case 'PRODUCT_WISE':
-        return this.calculateProductWiseDiscount(coupon, cart, applicability);
+        return this.calculateProductWiseDiscount(coupon, cart);
         
       case 'BXGY':
-        return this.calculateBxGyDiscount(coupon, cart, applicability);
+        return this.calculateBXGYDiscountComplex(coupon, cart);
         
       default:
         return { discount: 0, reason: 'Unknown coupon type' };
     }
   }
   
-  /**
-   * Calculate cart-wise discount
-   */
-  static calculateCartWiseDiscount(coupon, cart, applicability) {
-    const cartTotal = applicability.cartTotal;
-    let discount = 0;
+
+  static calculateCartWiseDiscount(coupon, cartItems) {
+    const cartTotal = cartItems.reduce(
+        (sum, item) => sum + (item.price * item.quantity), 
+        0
+    );
     
-    // Percentage discount
-    if (coupon.discountValue <= 100) {
-      discount = (cartTotal * coupon.discountValue) / 100;
-    } 
-    // Fixed amount discount
-    else {
-      discount = coupon.discountValue;
+    if (coupon.minCartValue && cartTotal < coupon.minCartValue) {
+        return 0;
     }
     
-    // Apply max discount cap
+    let discount = (cartTotal * coupon.discountValue) / 100;
+    
     if (coupon.maxDiscount && discount > coupon.maxDiscount) {
-      discount = coupon.maxDiscount;
+        discount = coupon.maxDiscount;
     }
-    
-    // Ensure discount doesn't exceed cart total
-    discount = Math.min(discount, cartTotal);
-    
     return {
       discount,
       cartTotal,
       discountType: coupon.discountValue <= 100 ? 'percentage' : 'fixed'
     };
   }
-  
-  /**
-   * Calculate product-wise discount
-   */
-  static calculateProductWiseDiscount(coupon, cart, applicability) {
-    let totalDiscount = 0;
-    const itemDiscounts = [];
+
+  static calculateProductWiseDiscount(coupon, cartItems) {
+    let eligibleItems = cartItems.filter(item => 
+        coupon.applicableProducts.includes(item.productId)
+    );
     
-    applicability.applicableItems.forEach(item => {
-      let itemDiscount = 0;
-      
-      // Percentage discount
-      if (coupon.discountValue <= 100) {
+    if (eligibleItems.length === 0) return 0;
+    
+    let totalDiscount = 0;
+    
+    eligibleItems.forEach(item => {
+        let itemDiscount = 0;
+        
+        if (coupon.discountType === 'PERCENTAGE') {
         itemDiscount = (item.price * item.quantity * coupon.discountValue) / 100;
-      } 
-      // Fixed amount discount per item
-      else {
+        } else {
         itemDiscount = coupon.discountValue * item.quantity;
-      }
-      
-      // Apply max discount per item (if specified)
-      if (coupon.maxDiscount) {
-        itemDiscount = Math.min(itemDiscount, coupon.maxDiscount);
-      }
-      
-      // Ensure discount doesn't exceed item total
-      const itemTotal = item.price * item.quantity;
-      itemDiscount = Math.min(itemDiscount, itemTotal);
-      
-      totalDiscount += itemDiscount;
+        }
+        
+        totalDiscount += itemDiscount;
+    });
+    
+    if (coupon.maxDiscount && totalDiscount > coupon.maxDiscount) {
+        totalDiscount = coupon.maxDiscount;
+    }
       itemDiscounts.push({
         productId: item.productId,
         quantity: item.quantity,
         itemDiscount
       });
-    });
     
     return {
       discount: totalDiscount,
-      applicableTotal: applicability.applicableTotal,
       itemDiscounts,
       discountType: coupon.discountValue <= 100 ? 'percentage' : 'fixed'
     };
   }
   
-  /**
-   * Calculate BxGy discount
-   */
-  static calculateBxGyDiscount(coupon, cart, applicability) {
-    const maxApplications = applicability.maxApplications;
-    let totalDiscount = 0;
-    const freeItems = [];
+  static calculateBXGYDiscountComplex(coupon, cartItems) {
+    if (coupon.type !== 'BXGY') return 0;
     
-    // Calculate discount from free items
-    coupon.getProducts.forEach(getReq => {
-      // Find the item in cart
-      const cartItem = cart.items.find(item => item.productId === getReq.productId);
-      
-      if (cartItem) {
-        // Calculate how many items we can make free based on applications
-        const freeQuantity = getReq.quantity * maxApplications;
-        const actualFreeQuantity = Math.min(freeQuantity, cartItem.quantity);
+    const cartItemMap = new Map();
+    cartItems.forEach(item => {
+        cartItemMap.set(item.productId, item);
+    });
+    
+    const hasBuyProducts = coupon.buyProducts.some(bp => 
+        cartItemMap.has(bp.productId)
+    );
+    
+    if (!hasBuyProducts) return 0;
+    let totalBuyQuantity = 0;
+    coupon.buyProducts.forEach(buyProduct => {
+        const cartItem = cartItemMap.get(buyProduct.productId);
+        if (cartItem) {
+        totalBuyQuantity += cartItem.quantity;
+        }
+    });
+    
+    const requiredBuyPerSet = coupon.buyProducts.reduce(
+        (sum, item) => sum + item.quantity, 
+        0
+    );
+    
+    let possibleSets = Math.floor(totalBuyQuantity / requiredBuyPerSet);
+    
+    coupon.buyProducts.forEach(buyProduct => {
+        const cartItem = cartItemMap.get(buyProduct.productId);
+        if (cartItem) {
+        const individualSets = Math.floor(cartItem.quantity / buyProduct.quantity);
+        possibleSets = Math.min(possibleSets, individualSets);
+        } else {
+        possibleSets = 0;
+        }
+    });
+  
+    if (possibleSets === 0) return 0;
+    
+    const repetitionLimit = coupon.repetitionLimit || 1;
+    const applicableSets = Math.min(possibleSets, repetitionLimit);
+    
+    let totalDiscount = 0;
+    let totalFreeItemsToGive = 0;
+    
+    coupon.getProducts.forEach(getProduct => {
+        const freeItemsCount = getProduct.quantity * applicableSets;
+        totalFreeItemsToGive += freeItemsCount;
         
-        const itemDiscount = cartItem.price * actualFreeQuantity;
-        totalDiscount += itemDiscount;
-        
-        freeItems.push({
-          productId: getReq.productId,
-          freeQuantity: actualFreeQuantity,
-          itemDiscount
-        });
-      } else {
-        // Item not in cart - might be free item that needs to be added
-        // This depends on business logic
-        freeItems.push({
-          productId: getReq.productId,
-          freeQuantity: getReq.quantity * maxApplications,
-          itemDiscount: 0,
-          note: 'Item not in cart'
-        });
-      }
+        const cartItem = cartItemMap.get(getProduct.productId);
+        if (cartItem) {
+        const actualFree = Math.min(freeItemsCount, cartItem.quantity);
+        totalDiscount += actualFree * cartItem.price;
+        }
     });
     
     return {
       discount: totalDiscount,
-      maxApplications,
-      freeItems,
+      totalFreeItemsToGive,
       discountType: 'free_items'
     };
   }
   
-  /**
-   * Apply coupon to cart and return updated cart
-   */
   static applyCouponToCart(coupon, cart) {
     const discountResult = this.calculateDiscount(coupon, cart);
     
@@ -289,13 +248,8 @@ export class CouponService {
       throw new Error('Cannot apply coupon: ' + (discountResult.reason || 'Invalid coupon'));
     }
     
-    // Create a deep copy of cart
     const updatedCart = JSON.parse(JSON.stringify(cart));
-    
-    // Calculate cart total
     const cartTotal = this.calculateCartTotal(cart);
-    
-    // Apply discounts based on coupon type
     switch(coupon.type) {
       case 'CART_WISE':
         // Update cart totals
@@ -305,7 +259,6 @@ export class CouponService {
         break;
         
       case 'PRODUCT_WISE':
-        // Apply discounts to individual items
         discountResult.itemDiscounts.forEach(itemDiscount => {
           const item = updatedCart.items.find(i => i.productId === itemDiscount.productId);
           if (item) {
@@ -314,14 +267,12 @@ export class CouponService {
           }
         });
         
-        // Update cart totals
         updatedCart.totalPrice = cartTotal;
         updatedCart.totalDiscount = discountResult.discount;
         updatedCart.finalPrice = cartTotal - discountResult.discount;
         break;
         
       case 'BXGY':
-        // Mark free items
         discountResult.freeItems.forEach(freeItem => {
           const item = updatedCart.items.find(i => i.productId === freeItem.productId);
           if (item && freeItem.itemDiscount > 0) {
@@ -338,7 +289,6 @@ export class CouponService {
         break;
     }
     
-    // Add coupon info to cart
     updatedCart.appliedCoupon = {
       couponId: coupon._id,
       code: coupon.code,
@@ -352,9 +302,6 @@ export class CouponService {
     };
   }
   
-  /**
-   * Get all applicable coupons for a cart
-   */
   static async getApplicableCoupons(cart, couponModel) {
     // Get all active coupons
     const coupons = await couponModel.find({
@@ -381,9 +328,7 @@ export class CouponService {
       }
     }
     
-    // Sort by discount amount (highest first)
-    applicableCoupons.sort((a, b) => b.discount - a.discount);
-    
+    applicableCoupons.sort((a, b) => b.discount - a.discount);    
     return applicableCoupons;
   }
 }
